@@ -8,32 +8,78 @@ import numpy as np
 import viz_mask
 import torchvision.transforms as transforms
 import imageio
+import torch.nn as nn
+import torchvision.models as models
+import mean_iou_evaluate
 
+
+class FCN8(nn.Module):
+    def __init__(self):
+        super(FCN8, self).__init__()
+        self.vgg_feature = models.vgg16(pretrained=True).features
+
+        self.p0_p3 = self.vgg_feature[:17]
+        self.p3_p4 = self.vgg_feature[17:24]
+        self.p4_p5 = self.vgg_feature[24:31]
+        
+        #upsample 2x
+        self.up2x = nn.Upsample(scale_factor= 2 , mode='bilinear', align_corners=True)
+        #upsample 8x
+        self.ct8x = nn.Sequential(
+            nn.ConvTranspose2d(256,7,8,8),
+            nn.ReLU()
+        )
+        #shape channel from 512 to 256
+        self.ct = nn.Sequential(
+            nn.ConvTranspose2d(512,256,2,stride=2),
+            nn.ReLU()
+        )
+
+    def forward(self, x):
+        p3 = self.p0_p3(x)
+        p4 = self.p3_p4(p3)
+        p5 = self.p4_p5(p4)
+
+        p4p5 = self.up2x(p5) + p4
+        p4p5 = self.ct(p4p5)
+        p3p4p5 = p4p5+p3
+
+        x = self.ct8x(p3p4p5)
+        return x
 
 class PRED(Dataset):
     def __init__(self, root):
         self.X = None
         self.filenames = []
         self.filepaths =  glob.glob(os.path.join(root,'*.jpg'))
+        self.images = []
         self.root = root
-        self.transform = transforms.Compose(
+        self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225]),
-        )
+            ])
 
         for i in self.filepaths :
             self.filenames.append(os.path.splitext(os.path.basename(i))[0])
+            # self.images.append(imageio.imread(i))
         
         self.len = len(self.filenames)
     
     def __getitem__(self, index) :
         filepath = self.filepaths[index]
-        self.X = Image.open(filepath)
-        return self.X
+        filename = self.filenames[index]
+        # img = self.images[index]
+        X = Image.open(filepath)
+        X = self.transform(X)
+        # img = self.transform(img)
+        #img(transformed), filename, imgio
+        # return X,filename,img
+        return X,filename
 
     def __len__(self):
         return self.len
+
 
 
 def arg_parse():
@@ -53,42 +99,32 @@ def arg_parse():
     args = parser.parse_args()
     return args
 
-def output_to_png(filenames, masks, img, out_path):
-    for filename in filenames:
-        cs = np.unique(masks)
-        for c in cs:
-            mask = np.zeros((img.shape[0], img.shape[1]))
-            ind = np.where(masks==c)
-            mask[ind[0], ind[1]] = 1
-            img =  viz_mask.viz_data(img, mask, color= viz_mask.cmap[c])
-            imageio.imsave(os.path.join(out_path,'{}.png'.format(filename)), np.uint8(img))
+def output_to_png(filename, masks, out_path):
+    pass
 
+            
     
 def test_and_output(model,test_dataloader, out_path):
-    labels = []
-    for data in test_dataloader:
+    print('test_and_output')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    for i, (data, filename) in enumerate(test_dataloader):
         data = data.to(device)
         output = model(data)
         pred = output.max(1, keepdim=False)[1].cpu().numpy()
-        labels.append(pred)
-    output_to_png(test_dataloader.dataset.filenames,
-                    labels,
-                    test_dataloader.dataset,
-                    out_path
-                    )
+        # img = Image.fromarray(img)
+        
+        
 
 if __name__=='__main__':
     # args = arg_parse()
     # img_path = args.img_path
     # out_path = args.out_path
-    img_path = './'
-    out_path = './'
+    img_path = './HW1/p2_data/validation'
+    out_path = './HW1/p2_data/out'
     # model = torch.load('hw1_p1.pth')
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_dataset = PRED(img_path)
-    test_dataloader = DataLoader(test_dataset)
-    model = torch.load('./5_73.pth')
+    test_dataloader = DataLoader(test_dataset, batch_size=2)
+    model = torch.load('./HW1/done.pth')
     test_and_output(model, test_dataloader, out_path)
-    
-    
