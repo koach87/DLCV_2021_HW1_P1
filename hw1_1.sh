@@ -1,0 +1,1 @@
+python3 predict_output_p1.py --img_path "$1" --csv_path "$2"

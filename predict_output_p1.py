@@ -40,22 +40,9 @@ class PRED(Dataset):
         return self.filenames
 
 
-def arg_parse():
-    parser =  argparse.ArgumentParser(description='Use to predict image for HW1_p1')
-    parser.add_argument(
-        '--img_path',
-        type=str,
-        default='',
-        help='path to image'
-    )
-    parser.add_argument(
-        '--csv_path',
-        type=str,
-        default='',
-        help='path to csv'
-    )
-    args = parser.parse_args()
-    return args
+# def arg_parse():
+#     args = parser.parse_args()
+#     return args
 
 def output_to_csv(filenames, labels, csv_path):
     pred = {"image_id":[],"label":[]}
@@ -80,22 +67,22 @@ def test_and_output(model,test_dataloader, csv_path):
 
 if __name__=='__main__':
 
-    # args = arg_parse()
-    # img_path = args.img_path
-    # csv_path = args.img_path
+    parser =  argparse.ArgumentParser(description='Use to predict image for HW1_p1')
+    parser.add_argument( '--img_path', type=str, default='', help='path to image' )
+    parser.add_argument( '--csv_path', type=str, default='', help='path to csv')
+    args = parser.parse_args()
 
-    img_path = './HW1/p1_data/v_6'
-    csv_path = './output/pred.csv'
+    img_path = args.img_path
+    csv_path = args.csv_path
 
-    # model = torch.load('hw1_p1.pth')
-    # img = Image.open(img_path)
-    # # out = model(img)
+    # img_path = 'HW1/p1_data/v_6'
+    # csv_path = 'out/pred.csv'
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     test_dataset = PRED(img_path)
     print(len(test_dataset))
     test_dataloader = DataLoader(test_dataset)
-    model = torch.load('HW1/p1GOOD/5_73.pth')
+    model = torch.load('HW1_P1.pth')
     test_and_output(model, test_dataloader,csv_path)
     
     

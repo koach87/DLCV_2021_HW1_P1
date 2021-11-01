@@ -80,26 +80,8 @@ class PRED(Dataset):
     def __len__(self):
         return self.len
 
-
-
-def arg_parse():
-    parser =  argparse.ArgumentParser(description='Use to predict image for HW1_p1')
-    parser.add_argument(
-        '--img_path',
-        type=str,
-        default='',
-        help='path to load'
-    )
-    parser.add_argument(
-        '--out_path',
-        type=str,
-        default='',
-        help='path to save'
-    )
-    args = parser.parse_args()
-    return args
-
 def output_to_png(filename, masks, out_path):
+
     pass
 
             
@@ -112,14 +94,18 @@ def test_and_output(model,test_dataloader, out_path):
         data = data.to(device)
         output = model(data)
         pred = output.max(1, keepdim=False)[1].cpu().numpy()
-        # img = Image.fromarray(img)
+        for j in range(len(pred)):
+            output_to_png(filename[i],pred[i],out_path)
         
         
 
 if __name__=='__main__':
-    # args = arg_parse()
-    # img_path = args.img_path
-    # out_path = args.out_path
+
+    # parser =  argparse.ArgumentParser(description='Use to predict image for HW1_p1')
+    # parser.add_argument( '--img_path', type=str, default='', help='path to image' )
+    # parser.add_argument( '--out_path', type=str, default='', help='path to out')
+    # args = parser.parse_args()
+
     img_path = './HW1/p2_data/validation'
     out_path = './HW1/p2_data/out'
     # model = torch.load('hw1_p1.pth')
